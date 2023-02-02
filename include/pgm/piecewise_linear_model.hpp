@@ -305,7 +305,6 @@ size_t make_segmentation_par(size_t n, size_t epsilon, Fin in, Fout out) {
     auto parallelism = std::min(std::min(omp_get_num_procs(), omp_get_max_threads()), 20);
     auto chunk_size = n / parallelism;
     auto c = 0ull;
-
     if (parallelism == 1 || n < 1ull << 15)
         return make_segmentation(n, epsilon, in, out);
 

@@ -13,18 +13,22 @@
 #include "pgm/pgm_index.hpp"
 
 int main() {
+
+
+    int key=45555;
     // Generate some random data
     std::vector<int> data(1000000);
     std::generate(data.begin(), data.end(), std::rand);
-    data.push_back(42);
+    data.push_back(key);
     std::sort(data.begin(), data.end());
 
     // Construct the PGM-index
     const int epsilon = 128; // space-time trade-off parameter
     pgm::PGMIndex<int, epsilon> index(data);
 
+
     // Query the PGM-index
-    auto q = 42;
+    auto q = key;
     auto range = index.search(q);
     auto lo = data.begin() + range.lo;
     auto hi = data.begin() + range.hi;

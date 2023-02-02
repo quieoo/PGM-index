@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "softfloat.hpp"
 namespace pgm {
 
 #define PGM_SUB_EPS(x, epsilon) ((x) <= (epsilon) ? 0 : ((x) - (epsilon)))
@@ -39,7 +40,7 @@ struct ApproxPos {
     size_t lo;  ///< The lower bound of the range.
     size_t hi;  ///< The upper bound of the range.
 };
-
+int _g=0;
 /**
  * A space-efficient index that enables fast search operations on a sorted sequence of @c n numbers.
  *
@@ -61,7 +62,7 @@ struct ApproxPos {
  * @tparam EpsilonRecursive controls the size of the search range in the internal structure
  * @tparam Floating the floating-point type to use for slopes
  */
-template<typename K, size_t Epsilon = 64, size_t EpsilonRecursive = 4, typename Floating = float>
+template<typename K, size_t Epsilon = 64, size_t EpsilonRecursive = 4, typename Floating = SoftFloat>
 class PGMIndex {
 protected:
     template<typename, size_t, size_t, uint8_t, typename>
@@ -96,6 +97,19 @@ protected:
 
         auto build_level = [&](auto epsilon, auto in_fun, auto out_fun) {
             auto n_segments = internal::make_segmentation_par(last_n, epsilon, in_fun, out_fun);
+            
+            /*printf(" %d %f\n", last_n,segments.back().slope);
+            if(segments.back().slope == 0){
+                printf("back is 0\n");
+            }else{
+                printf("back is not 0\n");
+            }*/
+            /*
+            printf("last_n: %d\n", last_n);
+            segments.back().slope.print();
+            if(_g++ > 10) exit(0);
+            */
+
             if (last_n > 1 && segments.back().slope == 0) {
                 // Here we need to ensure that keys > *(last-1) are approximated to a position == prev_level_size
                 segments.emplace_back(*std::prev(last) + 1, 0, last_n);
