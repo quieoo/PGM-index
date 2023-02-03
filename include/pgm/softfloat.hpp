@@ -19,20 +19,21 @@ struct SoftFloat{
     SoftFloat()=default;
     SoftFloat(const SoftFloat &sf):sign(sf.sign), mant(sf.mant), exp(sf.exp){};
     SoftFloat(int32_t s, uint64_t m, int32_t e):sign(s), mant(m), exp(e){};
-    SoftFloat(int n){
-        SoftFloat sf;
-        sf.sign=0;
+    SoftFloat(int64_t n){
+        sign=0;
         if(n<0){
-            sf.sign=1;
+            sign=1;
             n*=-1;
         }
-        sf.mant=n<<MANT_BITS;
-        sf.exp=0;
-        SoftFloat _sf=sf.normalize_right();
+        mant=n<<MANT_BITS;
+        exp=0;
+        SoftFloat _sf=normalize_right();
 
         sign=_sf.sign;
         mant=_sf.mant;
         exp=_sf.exp;
+        //printf("int2sf\n    %d\n    ",n);
+        //print_sf(this);
     }
 
 
@@ -82,7 +83,10 @@ struct SoftFloat{
     }
 
     SoftFloat operator/(SoftFloat sf)const{
-
+        //printf("div\n    ");
+        //print_sf(this);
+        //printf("    ");
+        //print_sf(&sf);
         SoftFloat result, a(*this);
         
         a.mant=(a.mant|MANT_HIDE)<<MANT_BITS;

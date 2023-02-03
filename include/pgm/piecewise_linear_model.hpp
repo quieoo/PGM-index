@@ -56,6 +56,11 @@ private:
         bool operator==(const Slope &p) const { return dy * p.dx == dx * p.dy; }
         bool operator!=(const Slope &p) const { return dy * p.dx != dx * p.dy; }
         explicit operator SoftFloat() const {
+            //printf("------------------\n");
+            SoftFloat t=(SoftFloat)dy/dx;
+
+            //print_sf(&t);
+            //printf("%Lf(%d / %Lf)\n--------------\n", dy/(long double)dx, dy, (long double)dx);
             return (SoftFloat)dy/dx;
             // return dy / (long double) dx; 
         }

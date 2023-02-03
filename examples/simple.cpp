@@ -15,7 +15,7 @@
 int main() {
 
 
-    int key=45555;
+    int key=123456;
     // Generate some random data
     std::vector<int> data(1000000);
     std::generate(data.begin(), data.end(), std::rand);
@@ -32,6 +32,8 @@ int main() {
     auto range = index.search(q);
     auto lo = data.begin() + range.lo;
     auto hi = data.begin() + range.hi;
+    auto pos=lo;
+
     std::cout << *std::lower_bound(lo, hi, q);
 
     return 0;

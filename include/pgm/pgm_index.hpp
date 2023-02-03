@@ -235,6 +235,7 @@ struct PGMIndex<K, Epsilon, EpsilonRecursive, Floating>::Segment {
     explicit Segment(const typename internal::OptimalPiecewiseLinearModel<K, size_t>::CanonicalSegment &cs)
         : key(cs.get_first_x()) {
         auto[cs_slope, cs_intercept] = cs.get_floating_point_segment(key);
+    
         if (cs_intercept > std::numeric_limits<decltype(intercept)>::max())
             throw std::overflow_error("Change the type of Segment::intercept to int64");
         slope = cs_slope;
