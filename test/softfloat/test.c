@@ -8,4 +8,10 @@ int main(){
     printf("sign: %d, mant: %ul, exp: %d\n", sf.sign, sf.mant, sf.exp);
 
     printf("value: %u\n", sf2int(sf));
+
+    SoftFloat a=int2sf(2,0);
+    SoftFloat b=int2sf(7,0);
+    sf=div_sf(a,b);
+    printf("sign: %d, mant: %llu, exp: %d\n", sf.sign, sf.mant, sf.exp);
+
 }

@@ -1,7 +1,15 @@
-#include <stdint.h>
+#include <cstdint>
+#include <cstdio>
+
 #define EXP_BIAS 127
 #define MANT_BITS 23
+#define MANT_HIDE 0x800000
+#define MANT_MASK 0x7fffff
+#define MANT_UPPER 0x1000000
 
+#pragma once
+
+void print_sf(const void*);
 
 struct SoftFloat{
     int32_t sign;
@@ -11,19 +19,7 @@ struct SoftFloat{
     SoftFloat()=default;
     SoftFloat(const SoftFloat &sf):sign(sf.sign), mant(sf.mant), exp(sf.exp){};
     SoftFloat(int32_t s, uint64_t m, int32_t e):sign(s), mant(m), exp(e){};
-
-
-    SoftFloat normalize() const {
-        SoftFloat _sf(sign, mant, exp);
-        while(_sf.mant >= 0x1000000UL){
-            _sf.exp++;
-            _sf.mant >>= 1;
-        }
-        _sf.mant &= 0x007fffffUL;
-        return _sf;
-    }
-
-    SoftFloat(int64_t n){
+    SoftFloat(int n){
         SoftFloat sf;
         sf.sign=0;
         if(n<0){
@@ -32,11 +28,32 @@ struct SoftFloat{
         }
         sf.mant=n<<MANT_BITS;
         sf.exp=0;
-        SoftFloat _sf=sf.normalize();
+        SoftFloat _sf=sf.normalize_right();
 
         sign=_sf.sign;
         mant=_sf.mant;
         exp=_sf.exp;
+    }
+
+
+    SoftFloat normalize_right() const {
+        SoftFloat _sf(sign, mant, exp);
+        while(_sf.mant >= MANT_UPPER){
+            _sf.exp++;
+            _sf.mant >>= 1;
+        }
+        _sf.mant &= MANT_MASK;
+        return _sf;
+    }
+
+    SoftFloat normalize_left() const{
+        SoftFloat _sf(sign, mant, exp);
+        while(_sf.mant < MANT_HIDE){
+            _sf.mant <<= 1;
+            _sf.exp--;
+        }
+        _sf.mant &= MANT_MASK;
+        return _sf;
     }
 
     bool operator==(const SoftFloat* sf){
@@ -48,23 +65,103 @@ struct SoftFloat{
         return (sign==sf.sign && mant==sf.mant && exp==sf.exp);
     }
 
-    SoftFloat operator*(int k) const {
+    SoftFloat operator*(SoftFloat sf) const{
+
         SoftFloat result;
 
+        result.sign=sf.sign ^ sign;
+        result.mant = (((uint64_t)(sf.mant|MANT_HIDE) * (uint64_t)(mant|MANT_HIDE))>>MANT_BITS);
+        result.exp=sf.exp+exp;
+
+        return result.normalize_right();
+    }
+
+    SoftFloat operator*(int k) const {
         SoftFloat sf(k);
-        SoftFloat a=sf.normalize();
-        SoftFloat b=normalize();
+        return this->operator*(sf);
+    }
 
-        result.sign=a.sign ^ b.sign;
-        result.mant = (((uint64_t)(a.mant|0x00800000UL) * (uint64_t)(b.mant|0x00800000UL))>>MANT_BITS);
-        result.exp=a.exp+b.exp;
+    SoftFloat operator/(SoftFloat sf)const{
 
-        return result.normalize();
+        SoftFloat result, a(*this);
+        
+        a.mant=(a.mant|MANT_HIDE)<<MANT_BITS;
+        
+        result.sign=sf.sign ^ sign;
+        result.exp=a.exp-sf.exp;
+        result.mant = (a.mant) / (sf.mant| MANT_HIDE);
+        //2^46/2^23
+        // normalize
+        // result.print();
+        return result.normalize_left();
+    }
+
+
+    SoftFloat operator/(int k)const{
+        SoftFloat sf(k);
+        return this->operator/(sf);
+    }
+
+    SoftFloat operator+(SoftFloat sf) const{
+        SoftFloat result;
+
+        if(sf.exp > exp){
+            result.exp=sf.exp;
+            result.sign=sf.sign;
+            if(sf.sign==sign){
+                result.mant=(sf.mant|MANT_HIDE) + ((mant|MANT_HIDE)>>(sf.exp-exp));
+                return result.normalize_right();
+            }else{
+                result.mant=(sf.mant|MANT_HIDE) - ((mant|MANT_HIDE)>>(sf.exp-exp));
+                return result.normalize_left();
+            }
+        }else if(sf.exp < exp){
+            result.exp=exp;
+            result.sign=sign;
+            if(sf.sign==sign){
+                result.mant=(mant|MANT_HIDE) + ((sf.mant|MANT_HIDE)>>(exp-sf.exp));
+                return result.normalize_right();
+            }else{
+                result.mant=(mant|MANT_HIDE) - ((sf.mant|MANT_HIDE)>>(exp-sf.exp));
+                return result.normalize_left();
+            }
+        }else{
+            result.exp=sf.exp;
+            result.sign=sf.mant>mant ? sf.sign : sign;
+            if(sf.sign == sign){
+                result.mant=(sf.mant | MANT_HIDE) + (mant | MANT_HIDE);
+                return result.normalize_right();
+            }
+            else{
+                if(result.sign==sf.sign){
+                    result.mant=(sf.mant | MANT_HIDE) - (mant | MANT_HIDE);
+                }else{
+                    result.mant=(mant | MANT_HIDE) - (sf.mant | MANT_HIDE);
+                }
+                return result.normalize_left();
+            }
+        }
+    }
+    SoftFloat operator+(int k){
+        SoftFloat sf(k);
+        return this->operator+(sf);
+    }
+
+    SoftFloat operator-(SoftFloat sf) const{
+        SoftFloat n_sf(sf);
+        if(sf.sign==0) n_sf.sign=1;
+        else n_sf.sign=0;
+
+        return this->operator+(n_sf);
+    }
+    SoftFloat operator-(int k){
+        SoftFloat sf(k);
+        return this->operator-(sf);
     }
 
     operator int64_t(){
         if(exp>=0){
-            int64_t _mant=mant+ 0x800000;
+            int64_t _mant=mant+ MANT_HIDE;
             _mant = _mant>>(MANT_BITS-exp);
 
             if(sign==1) return -1 * _mant;
@@ -72,7 +169,9 @@ struct SoftFloat{
         }
         return 0;
     }
-    void print(){
-        printf("sign= %d, mant= %lu, exp= %d\n",sign, mant, exp);
-    }
 };
+
+void print_sf(const void* p){
+    SoftFloat *sf=(SoftFloat*)p;
+    printf("sign= %d, mant= %lx, exp= %d\n",sf->sign, sf->mant, sf->exp);
+}

@@ -1,33 +1,20 @@
 #include "softfloat.hpp"
 #include <cstdio>
+#include <utility>
+
+std::pair<SoftFloat, int> func1(){
+    return {SoftFloat(1),2};
+}
 
 int main(){
-    SoftFloat sf(50);
-    printf("sign: %d, mant: %lu, exp: %d\n", sf.sign, sf.mant, sf.exp);
-    sf.normalize();
-    printf("sign: %d, mant: %lu, exp: %d\n", sf.sign, sf.mant, sf.exp);
-    
-    // operator==
-    if(sf==50){
-        printf("equal\n");
-    }
 
-    // operator=
-    SoftFloat sff(500);
-    sf=sff;
-    printf("sign: %d, mant: %lu, exp: %d\n", sf.sign, sf.mant, sf.exp);
+   
+    SoftFloat b=(static_cast<SoftFloat>(2)*3-2*2)/6;
 
-    // operator*
-    SoftFloat mul=sf*10;
-    printf("sign: %d, mant: %lu, exp: %d\n", mul.sign, mul.mant, mul.exp);
-
-    // operator()
-    printf("%ld\n", int64_t(mul));
+    auto i=SoftFloat(2)+b*3;
+    print_sf(&i);
     
-    printf("%d\n",int64_t(sf*10)+100);
-    
+    auto[f,s]=func1();
+    print_sf(&f);
     return 0;
-
-
-
 }

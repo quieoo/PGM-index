@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "softfloat.hpp"
 #ifdef _OPENMP
 #include <omp.h>
 #else
@@ -37,7 +38,7 @@ namespace pgm::internal {
 
 template<typename T>
 using LargeSigned = typename std::conditional_t<std::is_floating_point_v<T>,
-                                                long double,
+                                                SoftFloat,
                                                 std::conditional_t<(sizeof(T) < 8), int64_t, __int128>>;
 
 template<typename X, typename Y>
@@ -54,7 +55,10 @@ private:
         bool operator>(const Slope &p) const { return dy * p.dx > dx * p.dy; }
         bool operator==(const Slope &p) const { return dy * p.dx == dx * p.dy; }
         bool operator!=(const Slope &p) const { return dy * p.dx != dx * p.dy; }
-        explicit operator long double() const { return dy / (long double) dx; }
+        explicit operator SoftFloat() const {
+            return (SoftFloat)dy/dx;
+            // return dy / (long double) dx; 
+        }
     };
 
     struct Point {
@@ -189,7 +193,7 @@ public:
     CanonicalSegment get_segment() {
         if (points_in_hull == 1)
             return CanonicalSegment(rectangle[0], rectangle[1], first_x);
-        return CanonicalSegment(rectangle, first_x);
+        return CanonicalSegment(rectangle, first_x); // this way
     }
 
     void reset() {
@@ -222,7 +226,7 @@ public:
 
     X get_first_x() const { return first; }
 
-    std::pair<long double, long double> get_intersection() const {
+    std::pair<SoftFloat, SoftFloat> get_intersection() const {
         auto &p0 = rectangle[0];
         auto &p1 = rectangle[1];
         auto &p2 = rectangle[2];
@@ -235,13 +239,16 @@ public:
 
         auto p0p1 = p1 - p0;
         auto a = slope1.dx * slope2.dy - slope1.dy * slope2.dx;
-        auto b = (p0p1.dx * slope2.dy - p0p1.dy * slope2.dx) / static_cast<long double>(a);
-        auto i_x = p0.x + b * slope1.dx;
-        auto i_y = p0.y + b * slope1.dy;
+
+        // auto b = (p0p1.dx * slope2.dy - p0p1.dy * slope2.dx) / static_cast<long double>(a);
+        SoftFloat sf_b = (SoftFloat(p0p1.dx) * slope2.dy - p0p1.dy * slope2.dx) / (a);
+        
+        auto i_x = SoftFloat(p0.x) + sf_b * slope1.dx;
+        auto i_y = SoftFloat(p0.y) + sf_b * slope1.dy;
         return {i_x, i_y};
     }
 
-    std::pair<long double, SY> get_floating_point_segment(const X &origin) const {
+    std::pair<SoftFloat, SY> get_floating_point_segment(const X &origin) const {
         if (one_point())
             return {0, (rectangle[0].y + rectangle[1].y) / 2};
 
@@ -251,22 +258,22 @@ public:
             auto intercept_d = slope.dx;
             auto rounding_term = ((intercept_n < 0) ^ (intercept_d < 0) ? -1 : +1) * intercept_d / 2;
             auto intercept = (intercept_n + rounding_term) / intercept_d + rectangle[1].y;
-            return {static_cast<long double>(slope), intercept};
+            return {SoftFloat(slope), intercept};
         }
 
         auto[i_x, i_y] = get_intersection();
         auto[min_slope, max_slope] = get_slope_range();
         auto slope = (min_slope + max_slope) / 2.;
-        auto intercept = i_y - (i_x - origin) * slope;
+        auto intercept = SoftFloat(i_y) - (i_x - origin) * slope;
         return {slope, intercept};
     }
 
-    std::pair<long double, long double> get_slope_range() const {
+    std::pair<SoftFloat, SoftFloat> get_slope_range() const {
         if (one_point())
             return {0, 1};
 
-        auto min_slope = static_cast<long double>(rectangle[2] - rectangle[0]);
-        auto max_slope = static_cast<long double>(rectangle[3] - rectangle[1]);
+        auto min_slope = SoftFloat(rectangle[2] - rectangle[0]);
+        auto max_slope = SoftFloat(rectangle[3] - rectangle[1]);
         return {min_slope, max_slope};
     }
 };
