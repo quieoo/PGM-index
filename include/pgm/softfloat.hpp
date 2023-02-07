@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 
 #define EXP_BIAS 127
 #define MANT_BITS 23
@@ -35,7 +36,15 @@ struct SoftFloat{
         //printf("int2sf\n    %d\n    ",n);
         //print_sf(this);
     }
+    void from_float(float x){
+        uint32_t _x;
+        memcpy(&(_x), &x, sizeof(float));
 
+        sign=_x & 0x80000000UL>>31;
+        exp=((_x & 0x7F800000UL)>>23)-127;
+        mant=_x & 0x7FFFFFUL;
+        // print_sf(this);
+    }
 
     SoftFloat normalize_right() const {
         SoftFloat _sf(sign, mant, exp);
@@ -67,7 +76,6 @@ struct SoftFloat{
     }
 
     SoftFloat operator*(SoftFloat sf) const{
-
         SoftFloat result;
 
         result.sign=sf.sign ^ sign;
@@ -83,6 +91,8 @@ struct SoftFloat{
     }
 
     SoftFloat operator/(SoftFloat sf)const{
+
+
         //printf("div\n    ");
         //print_sf(this);
         //printf("    ");
@@ -107,6 +117,7 @@ struct SoftFloat{
     }
 
     SoftFloat operator+(SoftFloat sf) const{
+        printf("+\n");
         SoftFloat result;
 
         if(sf.exp > exp){
@@ -172,6 +183,11 @@ struct SoftFloat{
             else return _mant;
         }
         return 0;
+    }
+
+    bool operator<(const SoftFloat &sf)const {
+        SoftFloat _sf=this->operator-(sf);
+        return sf.sign==0;
     }
 };
 

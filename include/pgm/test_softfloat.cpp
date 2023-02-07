@@ -16,5 +16,8 @@ int main(){
     
     auto[f,s]=func1();
     print_sf(&f);
+
+    SoftFloat ff;
+    ff.from_float(5.9);
     return 0;
 }

@@ -11,30 +11,43 @@
 #include <iostream>
 #include <algorithm>
 #include "pgm/pgm_index.hpp"
+#include <algorithm>
+#include <chrono>
 
-int main() {
+int main(int argc, char** argv) {
 
-
-    int key=123456;
+    int n=atoi(argv[1]);
     // Generate some random data
-    std::vector<int> data(1000000);
+    std::cout<<"generate data..."<<std::endl;
+    std::vector<int> data(n);
     std::generate(data.begin(), data.end(), std::rand);
-    data.push_back(key);
     std::sort(data.begin(), data.end());
 
+    std::cout<<"build index..."<<std::endl;
+    std::chrono::steady_clock::time_point build0 = std::chrono::steady_clock::now();
     // Construct the PGM-index
     const int epsilon = 128; // space-time trade-off parameter
     pgm::PGMIndex<int, epsilon> index(data);
+    std::chrono::steady_clock::time_point build1 = std::chrono::steady_clock::now();
+    std::cout<<"    use "<<std::chrono::duration_cast<std::chrono::microseconds> (build1 - build0).count() << "[us]"<<std::endl;
 
-
+    std::cout<<"run query test..."<<std::endl;
     // Query the PGM-index
-    auto q = key;
-    auto range = index.search(q);
-    auto lo = data.begin() + range.lo;
-    auto hi = data.begin() + range.hi;
-    auto pos=lo;
+    int success=0;
+    std::chrono::steady_clock::time_point query0 = std::chrono::steady_clock::now();
+    for(int i=0; i<data.size(); i++){
+        auto q=data[i];
+        auto range=index.search(q);
+        auto lo=data.begin()+range.lo;
+        auto hi=data.begin()+range.hi;
+        auto got=*std::lower_bound(lo, hi, q);
+        if(q==got){
+            success++;
+        }
+    }
+    std::chrono::steady_clock::time_point query1= std::chrono::steady_clock::now();
+    std::cout<<"    query success "<<success<<"/"<<n<<", with "<<std::chrono::duration_cast<std::chrono::microseconds> (query1-query0).count() << "[us]"<<std::endl;
 
-    std::cout << *std::lower_bound(lo, hi, q);
 
     return 0;
 }

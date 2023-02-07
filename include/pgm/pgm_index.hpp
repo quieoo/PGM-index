@@ -254,6 +254,7 @@ struct PGMIndex<K, Epsilon, EpsilonRecursive, Floating>::Segment {
      * @return the approximate position of the specified key
      */
     inline size_t operator()(const K &k) const {
+        /*called when query index*/
         auto pos = int64_t(slope * (k - key)) + intercept;
         return pos > 0 ? size_t(pos) : 0ull;
     }
