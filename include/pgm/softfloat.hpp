@@ -40,10 +40,12 @@ struct SoftFloat{
         uint32_t _x;
         memcpy(&(_x), &x, sizeof(float));
 
-        sign=_x & 0x80000000UL>>31;
+        sign=(_x & 0x80000000UL) >>31;
         exp=((_x & 0x7F800000UL)>>23)-127;
         mant=_x & 0x7FFFFFUL;
-        // print_sf(this);
+
+//        printf("    transform float: %f to sf", x);
+//        print_sf(this);
     }
 
     SoftFloat normalize_right() const {

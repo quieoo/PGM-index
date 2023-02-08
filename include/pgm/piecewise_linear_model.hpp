@@ -58,14 +58,19 @@ private:
         explicit operator SoftFloat() const {
             /*called when build index*/
             // compute with float but return as SoftFloat
-            /*
             float x=dy/(float)dx;
             SoftFloat _f;
             _f.from_float(x);
-            return _f;
-            */
+
+            /*debug
+            print_sf(&_f);
             SoftFloat t=(SoftFloat)dy/dx;
-            return (SoftFloat)dy/dx;
+            print_sf(&t);
+            */
+            return _f;
+            
+            // SoftFloat t=(SoftFloat)dy/dx;
+            // return (SoftFloat)dy/dx;
         }
 
         explicit operator long double() const{
