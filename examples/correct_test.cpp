@@ -11,11 +11,15 @@ int main(int argc, char** argv) {
     }
 
     const int epsilon = 128; // space-time trade-off parameter
-    pgm::PGMIndex<int, epsilon> index(data);
+    pgm::PGMIndex<int, epsilon, 4, float> index(data);
 
+    std::vector<int>_data;
+    pgm::PGMIndex<int, epsilon, 4, SoftFloat> _index(_data);
+    
+    
 
     int i=131;
-    auto range=index.search(i);
+    auto range=_index.search(i);
     auto lo=data.begin()+range.lo;
     auto hi=data.begin()+range.hi;
     auto got=*std::lower_bound(lo, hi, i);

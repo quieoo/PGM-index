@@ -216,7 +216,19 @@ public:
      * @return the size of the index in bytes
      */
     size_t size_in_bytes() const { return segments.size() * sizeof(Segment) + levels_offsets.size() * sizeof(size_t); }
+
+    void set_n(int _n){
+        n=_n;
+    }
+
+    void set_levels(size_t *levels, int level_num){
+        for(int i=0;i<level_num;i++){
+            levels_offsets.push_back(*(levels+i));
+        }
+    }
 };
+
+
 
 #pragma pack(push, 1)
 
