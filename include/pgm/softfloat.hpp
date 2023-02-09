@@ -56,10 +56,12 @@ struct SoftFloat{
 
         int8_t exp=((_x & 0x7F800000UL)>>23)-127;
         uint64_t mant=_x & 0x7FFFFFUL;
-        SoftFloat(mant, exp);
-
-        // printf("    transform float: %f(%x) to sf", x, _x);
-        // print_sf(this);
+        SoftFloat _sf=SoftFloat(mant, exp);
+        for(int i=0;i<4;i++){
+            base[i]=_sf.base[i];
+        }
+         //printf("    transform float: %f(%x) to sf", x, _x);
+         //print_sf(this);
     }
     /*
     171: 0001 0111 0001
