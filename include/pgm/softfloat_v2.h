@@ -781,7 +781,7 @@ struct SoftFloat{
         return this->operator/(sf);
     }
     operator int64_t(){
-        return f32_to_i64(value, 0, 0);
+        return f32_to_i64(value, softfloat_roundingMode, 0);
     }
 };
 
