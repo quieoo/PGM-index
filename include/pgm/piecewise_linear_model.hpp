@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-#include "softfloat.hpp"
+#include "softfloat_v2.h"
 #ifdef _OPENMP
 #include <omp.h>
 #else
@@ -69,8 +69,8 @@ private:
             */
             //return _f;
             
-             SoftFloat t=(SoftFloat)dy/dx;
-             return (SoftFloat)dy/dx;
+            SoftFloat t=(SoftFloat)dy/dx;
+            return (SoftFloat)dy/dx;
         }
 
         explicit operator long double() const{

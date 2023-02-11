@@ -1,4 +1,4 @@
-#include "softfloat.hpp"
+#include "softfloat_v2.h"
 #include <vector>
 
 
@@ -68,5 +68,7 @@ int main(){
     i2.insert(sf);
     SoftFloat _sf=i2.get();
     print_sf(&(_sf));
+
+    // 1111111 00011001100110011001101
 
 }

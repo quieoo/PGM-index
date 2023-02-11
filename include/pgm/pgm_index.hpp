@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-#include "softfloat.hpp"
+#include "softfloat_v2.h"
 namespace pgm {
 
 #define PGM_SUB_EPS(x, epsilon) ((x) <= (epsilon) ? 0 : ((x) - (epsilon)))
