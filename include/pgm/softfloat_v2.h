@@ -131,13 +131,11 @@ float32_t
 }
 
 
-float32_t f32_mul( float32_t *a, float32_t *b )
+float32_t f32_mul( union ui32_f32 ua, union ui32_f32 ub )
 {
-    union ui32_f32 uA;
     bool signA;
     int_fast16_t expA;
     uint_fast32_t sigA;
-    union ui32_f32 uB;
     bool signB;
     int_fast16_t expB;
     uint_fast32_t sigB;
@@ -148,20 +146,14 @@ float32_t f32_mul( float32_t *a, float32_t *b )
     uint_fast32_t sigZ;
     union ui32_f32 uZ;
 
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uA.f = *a;
-    signA = signF32UI( uA.ui );
-    expA  = expF32UI( uA.ui );
-    sigA  = fracF32UI( uA.ui );
-    uB.f = *b;
-    signB = signF32UI( uB.ui );
-    expB  = expF32UI( uB.ui );
-    sigB  = fracF32UI( uB.ui );
+    signA = signF32UI( ua.ui );
+    expA  = expF32UI( ua.ui );
+    sigA  = fracF32UI( ua.ui );
+    signB = signF32UI( ub.ui );
+    expB  = expF32UI( ub.ui );
+    sigB  = fracF32UI( ub.ui );
     signZ = signA ^ signB;
 
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
     if ( expA == 0xFF ) {
         if ( sigA || ((expB == 0xFF) && sigB) ) goto propagateNaN;
         magBits = expB | sigB;
@@ -172,8 +164,6 @@ float32_t f32_mul( float32_t *a, float32_t *b )
         magBits = expA | sigA;
         goto infArg;
     }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
     if ( ! expA ) {
         if ( ! sigA ) goto zero;
         normExpSig = softfloat_normSubnormalF32Sig( sigA );
@@ -186,27 +176,35 @@ float32_t f32_mul( float32_t *a, float32_t *b )
         expB = normExpSig.exp;
         sigB = normExpSig.sig;
     }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
     expZ = expA + expB - 0x7F;
     sigA = (sigA | 0x00800000)<<7;
     sigB = (sigB | 0x00800000)<<8;
     sigZ = softfloat_shortShiftRightJam64( (uint_fast64_t) sigA * sigB, 32 );
-    
     if ( sigZ < 0x40000000 ) {
         --expZ;
         sigZ <<= 1;
     }
-    return softfloat_roundPackToF32( signZ, expZ, sigZ );
+    // return softfloat_roundPackToF32( signZ, expZ, sigZ );
+    if((unsigned int)expZ >= 0xfd){
+        if(expZ < 0){
+            sigZ=softfloat_shiftRightJam32(sigZ, -expZ);
+            expZ=0;
+        }else if((0xFD < expZ) || (0x80000000 <= sigZ + 0x40)){
+            uZ.ui=packToF32UI( signZ, 0xFF, 0 ) - ! 0x40;
+            return uZ.f;
+        }
+    }
+    sigZ= (sigZ + 0x40)>>7;
+    sigZ &= ~(uint_fast32_t) (! ((sigZ & 0x70) ^ 0x40) & 1);
+    if ( ! sigZ ) expZ = 0;
+    uZ.ui = packToF32UI( signZ, expZ, sigZ );
+    return uZ.f;
 
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
- propagateNaN:
-    uZ.ui = softfloat_propagateNaNF32UI( uA.ui, uB.ui );
+
+propagateNaN:
+    uZ.ui = softfloat_propagateNaNF32UI( ua.ui, ub.ui );
     goto uiZ;
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
- infArg:
+infArg:
     if ( ! magBits ) {
         // softfloat_raiseFlags( softfloat_flag_invalid );
         uZ.ui = defaultNaNF32UI;
@@ -214,8 +212,6 @@ float32_t f32_mul( float32_t *a, float32_t *b )
         uZ.ui = packToF32UI( signZ, 0xFF, 0 );
     }
     goto uiZ;
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
  zero:
     uZ.ui = packToF32UI( signZ, 0, 0 );
  uiZ:

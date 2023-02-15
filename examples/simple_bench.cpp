@@ -14,8 +14,9 @@
 #include <algorithm>
 #include <chrono>
 
+#include <time.h>
 int main(int argc, char** argv) {
-
+    CLOCKS_PER_SEC;
     int n=atoi(argv[1]);
     // Generate some random data
     std::cout<<"generate data..."<<std::endl;
