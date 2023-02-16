@@ -6,17 +6,18 @@
 #ifndef soft_float_v2
 #define soft_float_v2 1
 
-#ifndef THREAD_LOCAL
-#define THREAD_LOCAL
-#endif
-
 typedef struct { uint32_t v; } float32_t;
 union ui32_f32 { uint32_t ui; float32_t f; };
 struct exp16_sig32 { int_fast16_t exp; uint_fast32_t sig; };
 #define signF32UI( a ) ((bool) ((uint32_t) (a)>>31))
 #define expF32UI( a ) ((int_fast16_t) ((a)>>23) & 0xFF)
 #define fracF32UI( a ) ((a) & 0x007FFFFF)
-
+#define softfloat_shiftRightJam32(a, dist) ((dist) < 31) ? (a)>>(dist) | ((uint32_t) ((a)<<(-(dist) & 31)) != 0) : ((a) != 0)
+#define softfloat_shortShiftRightJam64( a, dist ) (a)>>(dist) | (((a) & (((uint_fast64_t) 1<<(dist)) - 1)) != 0)
+#define softfloat_isSigNaNF32UI( uiA ) ((((uiA) & 0x7FC00000) == 0x7F800000) && ((uiA) & 0x003FFFFF))
+#define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
+#define packToF32UI( sign, exp, sig ) (((uint32_t) (sign)<<31) + ((uint32_t) (exp)<<23) + (sig))
+#define defaultNaNF32UI 0x7FC00000
 
 const uint_least8_t softfloat_countLeadingZeros8[256] = {
     8, 7, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -58,18 +59,6 @@ struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t sig )
     return z;
 }
 
-#define softfloat_shortShiftRightJam64( a, dist ) (a)>>(dist) | (((a) & (((uint_fast64_t) 1<<(dist)) - 1)) != 0)
-
-#define softfloat_isSigNaNF32UI( uiA ) ((((uiA) & 0x7FC00000) == 0x7F800000) && ((uiA) & 0x003FFFFF))
-#define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
-
-enum {
-    softfloat_flag_inexact   =  1,
-    softfloat_flag_underflow =  2,
-    softfloat_flag_overflow  =  4,
-    softfloat_flag_infinite  =  8,
-    softfloat_flag_invalid   = 16
-};
 
 uint_fast32_t
  softfloat_propagateNaNF32UI( uint_fast32_t uiA, uint_fast32_t uiB )
@@ -83,30 +72,6 @@ uint_fast32_t
     return (isNaNF32UI( uiA ) ? uiA : uiB) | 0x00400000;
 }
 
-
-
-#define packToF32UI( sign, exp, sig ) (((uint32_t) (sign)<<31) + ((uint32_t) (exp)<<23) + (sig))
-
-
-
-#define defaultNaNF32UI 0x7FC00000
-enum {
-    softfloat_round_near_even   = 0,
-    softfloat_round_minMag      = 1,
-    softfloat_round_min         = 2,
-    softfloat_round_max         = 3,
-    softfloat_round_near_maxMag = 4,
-    softfloat_round_odd         = 6
-};
-enum {
-    softfloat_tininess_beforeRounding = 0,
-    softfloat_tininess_afterRounding  = 1
-};
-#define init_detectTininess softfloat_tininess_beforeRounding
-
-THREAD_LOCAL uint_fast8_t softfloat_roundingMode = softfloat_round_near_even;
-THREAD_LOCAL uint_fast8_t softfloat_detectTininess = init_detectTininess;
-#define softfloat_shiftRightJam32(a, dist) ((dist) < 31) ? (a)>>(dist) | ((uint32_t) ((a)<<(-(dist) & 31)) != 0) : ((a) != 0)
 
 float32_t
  softfloat_roundPackToF32( bool sign, int_fast16_t exp, uint_fast32_t sig )
