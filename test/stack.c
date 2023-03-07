@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include "../include/pgm/softfloat_v2.h"
 #include<stdint.h>
-
+#include <malloc.h>
 #define test_depth 2048
 #define stack_padding 0xabcd
 
@@ -67,17 +67,18 @@ void original(){
 }
 
 void soft(){
-	//  float slope=0.00000275678;
-	//  float32_t _slope;
-	//  memcpy(&(_slope.v), &slope, sizeof(slope));
-	//uint64_t key=15556879l-0;
-	union ui32_f32 slope_u;
-	union ui32_f32 key_u;
-	key_u.f=i64_to_f32(15556879-0);
-	
-	//float32_t t=f32_mul(slope_u, slope_u);
-	//float32_t fkey=i64_to_f32(key);
-	int pos_key=f32_to_i64(f32_mul(slope_u, key_u));
+	float slope=0.00000275678;
+	float32_t _slope;
+	memcpy(&(_slope.v), &slope, sizeof(slope));
+	uint64_t key=15556879l-0;
+
+	int stack_size;
+	stack_test_begin();
+
+	int64_t pos=f32_to_i64(f32_mul(_slope.v, i64_to_f32(key).v));
+	stack_size = stack_test_end();
+	printf("stack: %d\n", stack_size);
+	printf("pos = %d\n", pos);
 }
 
 void print_stack(){
@@ -117,21 +118,19 @@ void test_size(){
 	uint32_t *x[4]={0};
 }
 
+void get_avi_stack_size(){
+	// int chars[100000]={0};
+	char c=0;
+	while(1){
+		printf("stack size: %d B\n", (long)&c-(long)alloca(100));
+	}
+}
+
+
+
 //测试
 int main(void)
 {
-    int stack_size;
-
-	stack_test_begin();
-	//func_stack_size_test2();
-	// test function
-	//stack_use();
-    //original();
-	soft();
-	// soft_breakdown();
-	//test_size();
-	stack_size = stack_test_end();
-	printf("stack: %d\n", stack_size);
-
+	soft();	
 	return 0;
 }
