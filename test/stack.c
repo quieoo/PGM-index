@@ -75,7 +75,7 @@ void soft(){
 	int stack_size;
 	stack_test_begin();
 
-	int64_t pos=f32_to_i64(f32_mul(_slope.v, i64_to_f32(key).v));
+	int64_t pos=f32_to_i64(f32_mul(_slope, i64_to_f32(key)));
 	stack_size = stack_test_end();
 	printf("stack: %d\n", stack_size);
 	printf("pos = %d\n", pos);

@@ -96,7 +96,7 @@ float32_t
 }
 
 
-float32_t f32_mul( unsigned int ua, unsigned int ub )
+float32_t f32_mul( float32_t a, float32_t b )
 {
     bool signA;
     short expA;
@@ -115,12 +115,12 @@ float32_t f32_mul( unsigned int ua, unsigned int ub )
     struct exp16_sig32 normExpSig;
     union ui32_f32 uZ;
 
-    signA = signF32UI( ua );
-    expA  = expF32UI( ua );
-    sigA  = fracF32UI( ua );
-    signB = signF32UI( ub );
-    expB  = expF32UI( ub );
-    sigB  = fracF32UI( ub );
+    signA = signF32UI( a.v );
+    expA  = expF32UI( a.v );
+    sigA  = fracF32UI( a.v );
+    signB = signF32UI( b.v );
+    expB  = expF32UI( b.v );
+    sigB  = fracF32UI( b.v );
     signZ = signA ^ signB;
 
     if ( expA == 0xFF ) {
@@ -171,7 +171,7 @@ float32_t f32_mul( unsigned int ua, unsigned int ub )
 
 
 propagateNaN:
-    uZ.ui = softfloat_propagateNaNF32UI( ua, ub );
+    uZ.ui = softfloat_propagateNaNF32UI( a.v, b.v );
     goto uiZ;
 infArg:
     if ( ! magBits ) {
