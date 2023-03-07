@@ -6,20 +6,20 @@
 #ifndef soft_float_v2
 #define soft_float_v2 1
 
-typedef struct { uint32_t v; } float32_t;
-union ui32_f32 { uint32_t ui; float32_t f; };
-struct exp16_sig32 { int_fast16_t exp; uint_fast32_t sig; };
-#define signF32UI( a ) ((bool) ((uint32_t) (a)>>31))
-#define expF32UI( a ) ((int_fast16_t) ((a)>>23) & 0xFF)
+typedef struct { unsigned int v; } float32_t;
+union ui32_f32 { unsigned int ui; float32_t f; };
+struct exp16_sig32 { short exp; unsigned int sig; };
+#define signF32UI( a ) ((bool) ((unsigned int) (a)>>31))
+#define expF32UI( a ) ((short) ((a)>>23) & 0xFF)
 #define fracF32UI( a ) ((a) & 0x007FFFFF)
-#define softfloat_shiftRightJam32(a, dist) ((dist) < 31) ? (a)>>(dist) | ((uint32_t) ((a)<<(-(dist) & 31)) != 0) : ((a) != 0)
-#define softfloat_shortShiftRightJam64( a, dist ) (a)>>(dist) | (((a) & (((uint_fast64_t) 1<<(dist)) - 1)) != 0)
+#define softfloat_shiftRightJam32(a, dist) ((dist) < 31) ? (a)>>(dist) | ((unsigned int) ((a)<<(-(dist) & 31)) != 0) : ((a) != 0)
+#define softfloat_shortShiftRightJam64( a, dist ) (a)>>(dist) | (((a) & (((unsigned long long) 1<<(dist)) - 1)) != 0)
 #define softfloat_isSigNaNF32UI( uiA ) ((((uiA) & 0x7FC00000) == 0x7F800000) && ((uiA) & 0x003FFFFF))
 #define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
-#define packToF32UI( sign, exp, sig ) (((uint32_t) (sign)<<31) + ((uint32_t) (exp)<<23) + (sig))
+#define packToF32UI( sign, exp, sig ) (((unsigned int) (sign)<<31) + ((unsigned int) (exp)<<23) + (sig))
 #define defaultNaNF32UI 0x7FC00000
 
-const uint_least8_t softfloat_countLeadingZeros8[256] = {
+const unsigned char softfloat_countLeadingZeros8[256] = {
     8, 7, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4,
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -38,9 +38,9 @@ const uint_least8_t softfloat_countLeadingZeros8[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t sig )
+struct exp16_sig32 softfloat_normSubnormalF32Sig( unsigned int sig )
 {
-    int_fast8_t shiftDist=0;
+    signed char shiftDist=0;
     struct exp16_sig32 z;
 
     if ( sig < 0x10000 ) {
@@ -60,8 +60,8 @@ struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t sig )
 }
 
 
-uint_fast32_t
- softfloat_propagateNaNF32UI( uint_fast32_t uiA, uint_fast32_t uiB )
+unsigned int
+ softfloat_propagateNaNF32UI( unsigned int uiA, unsigned int uiB )
 {
     bool isSigNaNA;
     isSigNaNA = softfloat_isSigNaNF32UI( uiA );
@@ -74,7 +74,7 @@ uint_fast32_t
 
 
 float32_t
- softfloat_roundPackToF32( bool sign, int_fast16_t exp, uint_fast32_t sig )
+ softfloat_roundPackToF32( bool sign, short exp, unsigned int sig )
 {
     union ui32_f32 uZ;
 
@@ -88,7 +88,7 @@ float32_t
         }
     }
     sig = (sig + 0x40)>>7;
-    sig &= ~(uint_fast32_t) (! ((sig & 0x70) ^ 0x40) & 1);
+    sig &= ~(unsigned int) (! ((sig & 0x70) ^ 0x40) & 1);
     if ( ! sig ) exp = 0;
     uZ.ui = packToF32UI( sign, exp, sig );
  uiZ:
@@ -99,16 +99,20 @@ float32_t
 float32_t f32_mul( union ui32_f32 ua, union ui32_f32 ub )
 {
     bool signA;
-    int_fast16_t expA;
-    uint_fast32_t sigA;
+    short expA;
+    unsigned int sigA;
+
     bool signB;
-    int_fast16_t expB;
-    uint_fast32_t sigB;
+    short expB;
+    unsigned int sigB;
+    
     bool signZ;
-    uint_fast32_t magBits;
+    short expZ;
+    unsigned int sigZ;
+    
+    
+    unsigned int magBits;
     struct exp16_sig32 normExpSig;
-    int_fast16_t expZ;
-    uint_fast32_t sigZ;
     union ui32_f32 uZ;
 
     signA = signF32UI( ua.ui );
@@ -144,7 +148,7 @@ float32_t f32_mul( union ui32_f32 ua, union ui32_f32 ub )
     expZ = expA + expB - 0x7F;
     sigA = (sigA | 0x00800000)<<7;
     sigB = (sigB | 0x00800000)<<8;
-    sigZ = softfloat_shortShiftRightJam64( (uint_fast64_t) sigA * sigB, 32 );
+    sigZ = softfloat_shortShiftRightJam64( (unsigned long long) sigA * sigB, 32 );
     if ( sigZ < 0x40000000 ) {
         --expZ;
         sigZ <<= 1;
@@ -160,7 +164,7 @@ float32_t f32_mul( union ui32_f32 ua, union ui32_f32 ub )
         }
     }
     sigZ= (sigZ + 0x40)>>7;
-    sigZ &= ~(uint_fast32_t) (! ((sigZ & 0x70) ^ 0x40) & 1);
+    sigZ &= ~(unsigned int) (! ((sigZ & 0x70) ^ 0x40) & 1);
     if ( ! sigZ ) expZ = 0;
     uZ.ui = packToF32UI( signZ, expZ, sigZ );
     return uZ.f;
@@ -187,15 +191,15 @@ infArg:
 float32_t i64_to_f32( int64_t a )
 {
     bool sign;
-    uint_fast64_t absA;
-    int_fast8_t shiftDist;
+    unsigned long long absA;
+    signed char shiftDist;
     union ui32_f32 u;
-    uint_fast32_t sig;
+    unsigned int sig;
 
     sign = (a < 0);
-    absA = sign ? -(uint_fast64_t) a : (uint_fast64_t) a;
+    absA = sign ? -(unsigned long long) a : (unsigned long long) a;
 
-    uint32_t a32=absA;
+    unsigned int a32=absA;
     shiftDist = 0;
     a32 = a>>32;
     if ( ! a32 ) {
@@ -216,7 +220,7 @@ float32_t i64_to_f32( int64_t a )
     if ( 0 <= shiftDist ) {
         u.ui =
             a ? packToF32UI(
-                    sign, 0x95 - shiftDist, (uint_fast32_t) absA<<shiftDist )
+                    sign, 0x95 - shiftDist, (unsigned int) absA<<shiftDist )
                 : 0;
         return u.f;
     } else {
@@ -224,19 +228,19 @@ float32_t i64_to_f32( int64_t a )
         sig = 
             (shiftDist < 0)
                 ? softfloat_shortShiftRightJam64( absA, -shiftDist )
-                : (uint_fast32_t) absA<<shiftDist;
+                : (unsigned int) absA<<shiftDist;
         return softfloat_roundPackToF32( sign, 0x9C - shiftDist, sig );
     }
 }
 
 
 
-int_fast64_t f32_to_i64(float32_t f){
+long long f32_to_i64(float32_t f){
     uint8_t _e=(f.v >> 23) & 0xff;
     int8_t e=_e-127;
     
     if((e) > 0){
-        int_fast64_t m=(f.v & 0x7fffff) | 0x800000;
+        long long m=(f.v & 0x7fffff) | 0x800000;
         return m>>(23-(e));
     }
     return 0;
