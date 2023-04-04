@@ -233,16 +233,154 @@ float32_t i64_to_f32( int64_t a )
     }
 }
 
+#define i64_fromNaN          0
+#define i64_fromPosOverflow  INT64_C( 0x7FFFFFFFFFFFFFFF )
+#define i64_fromNegOverflow  (-INT64_C( 0x7FFFFFFFFFFFFFFF ) - 1)
+#define indexMultiwordLo( total, n ) ((total) - (n))
+#define indexWordHi( total ) 0
+#define indexWordLo( total ) ((total) - 1)
+#define indexMultiwordHiBut( total, n ) 0
+#define wordIncr -1
+#define indexMultiwordLoBut( total, n ) (n)
+#define indexMultiwordHi( total, n ) 0
+void
+ softfloat_shortShiftRightJamM(
+     uint_fast8_t size_words,
+     const uint32_t *aPtr,
+     uint_fast8_t dist,
+     uint32_t *zPtr
+ )
+{
+    uint_fast8_t uNegDist;
+    unsigned int index, lastIndex;
+    uint32_t partWordZ, wordA;
 
-
-long long f32_to_i64(float32_t f){
-    uint8_t _e=(f.v >> 23) & 0xff;
-    int8_t e=_e-127;
-    
-    if((e) > 0){
-        long long m=(f.v & 0x7fffff) | 0x800000;
-        return m>>(23-(e));
+    uNegDist = -dist;
+    index = indexWordLo( size_words );
+    lastIndex = indexWordHi( size_words );
+    wordA = aPtr[index];
+    partWordZ = wordA>>dist;
+    if ( partWordZ<<dist != wordA ) partWordZ |= 1;
+    while ( index != lastIndex ) {
+        wordA = aPtr[index + wordIncr];
+        zPtr[index] = wordA<<(uNegDist & 31) | partWordZ;
+        index += wordIncr;
+        partWordZ = wordA>>dist;
     }
-    return 0;
+    zPtr[index] = partWordZ;
+
+}
+void
+ softfloat_shiftRightJamM(
+     uint_fast8_t size_words,
+     const uint32_t *aPtr,
+     uint32_t dist,
+     uint32_t *zPtr
+ )
+{
+    uint32_t wordJam, wordDist, *ptr;
+    uint_fast8_t i, innerDist;
+
+    wordJam = 0;
+    wordDist = dist>>5;
+    if ( wordDist ) {
+        if ( size_words < wordDist ) wordDist = size_words;
+        ptr = (uint32_t *) (aPtr + indexMultiwordLo( size_words, wordDist ));
+        i = wordDist;
+        do {
+            wordJam = *ptr++;
+            if ( wordJam ) break;
+            --i;
+        } while ( i );
+        ptr = zPtr;
+    }
+    if ( wordDist < size_words ) {
+        aPtr += indexMultiwordHiBut( size_words, wordDist );
+        innerDist = dist & 31;
+        if ( innerDist ) {
+            softfloat_shortShiftRightJamM(
+                size_words - wordDist,
+                aPtr,
+                innerDist,
+                zPtr + indexMultiwordLoBut( size_words, wordDist )
+            );
+            if ( ! wordDist ) goto wordJam;
+        } else {
+            aPtr += indexWordLo( size_words - wordDist );
+            ptr = zPtr + indexWordLo( size_words );
+            for ( i = size_words - wordDist; i; --i ) {
+                *ptr = *aPtr;
+                aPtr += wordIncr;
+                ptr += wordIncr;
+            }
+        }
+        ptr = zPtr + indexMultiwordHi( size_words, wordDist );
+    }
+    do {
+        *ptr++ = 0;
+        --wordDist;
+    } while ( wordDist );
+ wordJam:
+    if ( wordJam ) zPtr[indexWordLo( size_words )] |= 1;
+}
+long long
+ softfloat_roundMToI64(
+     bool sign, uint32_t *extSigPtr)
+{
+    uint64_t sig;
+    uint32_t sigExtra;
+    union { uint64_t ui; int64_t i; } uZ;
+    int64_t z;
+
+    sig =
+        (uint64_t) extSigPtr[indexWord( 3, 2 )]<<32
+            | extSigPtr[indexWord( 3, 1 )];
+    sigExtra = extSigPtr[indexWordLo( 3 )];
+    
+    if ( sigExtra && (sign ? true : false)) {
+        ++sig;
+        if ( !sig ) goto invalid;
+    }
+    
+    uZ.ui = sign ? -sig : sig;
+    z = uZ.i;
+    if ( z && ((z < 0) ^ sign) ) goto invalid;
+    return z;
+
+ invalid:
+    return sign ? i64_fromNegOverflow : i64_fromPosOverflow;
+
+}
+long long f32_to_i64(float32_t f){
+    union ui32_f32 uA;
+    unsigned int uiA;
+    bool sign;
+    short exp;
+    unsigned int sig;
+    short shiftDist;
+    unsigned int extSig[3];
+
+    uA.f = f;
+    uiA = uA.ui;
+    sign = signF32UI( uiA );
+    exp  = expF32UI( uiA );
+    sig  = fracF32UI( uiA );
+
+    shiftDist = 0xBE - exp;
+    if ( shiftDist < 0 ) {
+        // softfloat_raiseFlags( softfloat_flag_invalid );
+        return
+            (exp == 0xFF) && sig ? i64_fromNaN
+                : sign ? i64_fromNegOverflow : i64_fromPosOverflow;
+    }
+
+    if ( exp ) sig |= 0x00800000;
+    extSig[indexWord( 3, 2 )] = sig<<8;
+    extSig[indexWord( 3, 1 )] = 0;
+    extSig[indexWord( 3, 0 )] = 0;
+    if ( shiftDist ) softfloat_shiftRightJamM( 3, extSig, shiftDist, extSig );
+
+    return softfloat_roundMToI64( sign, extSig);
+
 }
 #endif
