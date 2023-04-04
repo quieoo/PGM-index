@@ -243,6 +243,9 @@ float32_t i64_to_f32( int64_t a )
 #define wordIncr -1
 #define indexMultiwordLoBut( total, n ) (n)
 #define indexMultiwordHi( total, n ) 0
+#define indexWord( total, n ) ((total) - 1 - (n))
+
+
 void
  softfloat_shortShiftRightJamM(
      uint_fast8_t size_words,
